@@ -33,6 +33,9 @@ var lowWhiteHighBlue = 'HB7';
 var highRed = 'HR0';
 var highBlue = 'HB0';
 
+var lowRed = 'NR0';
+var lowBlue = 'NB0';
+
 var lowRedHighWhite = 'NW1';
 var lowBlueHighWhite = 'NW4';
 
@@ -251,31 +254,37 @@ function displayMap( data ) {
 		}
 
 		if ( dem['winprob'] > rep['winprob'] ) {
-			if ( dem['winprob'] > 88 ) {
-				output = lowWhiteHighBlue + solid + solid + solid + solid;
+			if ( dem['winprob'] > 90 ) {
+				output = lowBlue + solid + solid + solid + solid;
 			}
-			else if ( dem['winprob'] > 75 ) {
-				output = lowWhiteHighBlue + shade3 + shade3 + shade3 + shade3;
+			else if ( dem['winprob'] > 80 ) {
+				output = lowBlueLowWhite + shade3 + shade3 + shade3 + shade3;
 			}
-			else if ( dem['winprob'] > 63 ) {
-				output = lowWhiteHighBlue + shade2 + shade2 + shade2 + shade2
+			else if ( dem['winprob'] > 70 ) {
+				output = lowBlueLowWhite + shade2 + shade2 + shade2 + shade2;
+			}
+			else if ( dem['winprob'] > 60 ) {
+				output = lowBlueHighWhite + shade2 + shade2 + shade2 + shade2;
 			}
 			else if ( dem['winprob'] > 50 ) {
-				output = lowWhiteHighBlue + shade1 + shade1 + shade1 + shade1;
+				output = lowBlueHighWhite + shade1 + shade1 + shade1 + shade1;
 			}
 		}
 		else {
-			if ( rep['winprob'] > 88 ) {
-				output = lowWhiteHighRed + solid + solid + solid + solid;
+			if ( rep['winprob'] > 90 ) {
+				output = lowRed + solid + solid + solid + solid;
 			}
-			else if ( rep['winprob'] > 75 ) {
-				output = lowWhiteHighRed + shade3 + shade3 + shade3 + shade3;
+			else if ( rep['winprob'] > 80 ) {
+				output = lowRedLowWhite + shade3 + shade3 + shade3 + shade3;
 			}
-			else if ( rep['winprob'] > 63 ) {
-				output = lowWhiteHighRed + shade2 + shade2 + shade2 + shade2;
+			else if ( rep['winprob'] > 70 ) {
+				output = lowRedLowWhite + shade2 + shade2 + shade2 + shade2;
+			}
+			else if ( rep['winprob'] > 60 ) {
+				output = lowRedHighWhite + shade2 + shade2 + shade2 + shade2;
 			}
 			else if ( rep['winprob'] > 50 ) {
-				output = lowWhiteHighRed + shade1 + shade1 + shade1 + shade1;
+				output = lowRedHighWhite + shade1 + shade1 + shade1 + shade1;
 			}
 		}
 
