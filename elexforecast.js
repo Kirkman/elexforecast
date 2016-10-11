@@ -47,6 +47,7 @@ var lowBlueLowWhite = 'HW4';
 var charHorizSingle = ascii(196);
 var charHorizSingleDownDouble = ascii(210);
 var charVertDouble = ascii(186);
+var charVertSingle = ascii(179);
 var frac12 = ascii(171);
 
 var shade1 = ascii(176);
@@ -54,11 +55,23 @@ var shade2 = ascii(177);
 var shade3 = ascii(178);
 var solid = ascii(219);
 
+var blockUpper = ascii(223);
+var blockLower = ascii(220);
+
+
 // Frame for the whole app
 var frame = new Frame(1, 1, 80, 24, 0);
 frame.putmsg( lowWhite + 'hi' );
 
 
+function sortByFirstElem(a, b) {
+	if (a[0] === b[0]) {
+		return 0;
+	}
+	else {
+		return (a[0] < b[0]) ? -1 : 1;
+	}
+}
 
 
 function getStateInfo( abbr ) {
@@ -70,7 +83,7 @@ function getStateInfo( abbr ) {
 		{ "nbrL":"de", "nbrR":"ut", "nbrU":"or", "nbrD":"wa", "abbr":"ca","long":"California", "x":12, "y":13 },
 		{ "nbrL":"ut", "nbrR":"ne", "nbrU":"wy", "nbrD":"nm", "abbr":"co","long":"Colorado", "x":24, "y":13 },
 		{ "nbrL":"nj", "nbrR":"or", "nbrU":"ri", "nbrD":"de", "abbr":"ct","long":"Connecticut", "x":66, "y":10 },
-		{ "nbrL":"sc", "nbrR":"az", "nbrU":"md", "nbrD":"ny", "abbr":"dc","long":"Washington D.C.", "x":60, "y":16 },
+		{ "nbrL":"sc", "nbrR":"az", "nbrU":"md", "nbrD":"fl", "abbr":"dc","long":"Washington DC", "x":60, "y":16 },
 		{ "nbrL":"md", "nbrR":"ca", "nbrU":"ct", "nbrD":"vt", "abbr":"de","long":"Delaware", "x":66, "y":13 },
 		{ "nbrL":"tx", "nbrR":"hi", "nbrU":"dc", "nbrD":"ny", "abbr":"fl","long":"Florida", "x":60, "y":22 },
 		{ "nbrL":"al", "nbrR":"ok", "nbrU":"sc", "nbrD":"mi", "abbr":"ga","long":"Georgia", "x":54, "y":19 },
@@ -97,7 +110,7 @@ function getStateInfo( abbr ) {
 		{ "nbrL":"pa", "nbrR":"ct", "nbrU":"ny", "nbrD":"md", "abbr":"nj","long":"New Jersey", "x":60, "y":10 },
 		{ "nbrL":"az", "nbrR":"ks", "nbrU":"co", "nbrD":"mt", "abbr":"nm","long":"New Mexico", "x":24, "y":16 },
 		{ "nbrL":"or", "nbrR":"wy", "nbrU":"id", "nbrD":"ut", "abbr":"nv","long":"Nevada", "x":18, "y":10 },
-		{ "nbrL":"mi", "nbrR":"ri", "nbrU":"dc", "nbrD":"nj", "abbr":"ny","long":"New York", "x":60, "y":7 },
+		{ "nbrL":"mi", "nbrR":"ri", "nbrU":"fl", "nbrD":"nj", "abbr":"ny","long":"New York", "x":60, "y":7 },
 		{ "nbrL":"in", "nbrR":"pa", "nbrU":"wi", "nbrD":"wv", "abbr":"oh","long":"Ohio", "x":48, "y":10 },
 		{ "nbrL":"ga", "nbrR":"la", "nbrU":"ks", "nbrD":"tx", "abbr":"ok","long":"Oklahoma", "x":30, "y":19 },
 		{ "nbrL":"ct", "nbrR":"nv", "nbrU":"wa", "nbrD":"ca", "abbr":"or","long":"Oregon", "x":12, "y":10 },
@@ -157,7 +170,7 @@ function displayTitle() {
 	titleFrame.load( js.exec_dir + 'graphics/elexforecast-title.bin');
 	titleFrame.draw();
 	var userInput = '';
-	while( ascii(userInput) != 27 && ascii(userInput) != 81 && ascii(userInput) != 13) {
+	while( ascii(userInput) != 27 && ascii(userInput) != 81 && ascii(userInput) != 13 ) {
 		userInput = console.getkey( K_UPPER );
 	}
 	titleFrame.close();
@@ -307,7 +320,7 @@ function displayMap( data ) {
 	// Keep running as long as the user hasn't hit [esc] or [q]
 	var currentState = 'ak'
 	var userInput = '';
-	while( ascii(userInput) != 27 && ascii(userInput) != 81 ) {
+	while( ascii(userInput) != 27 && ascii(userInput) != 81 && ascii(userInput) != 13 ) {
 		userInput = console.getkey( K_UPPER );
 		if ( userInput == KEY_LEFT || userInput == KEY_RIGHT ||  userInput == KEY_UP || userInput == KEY_DOWN ) {
 			switch( userInput ) {
@@ -330,9 +343,12 @@ function displayMap( data ) {
 			displayInfo( data, currentState );
 		}
 	}
-	cleanUp();
-	exit();
 
+	for (var i=0; i < states.length; i++) {
+		states[i]['frame'].delete();
+	}
+	creditFrame.delete();
+	infoFrame.delete();
 }
 
 
@@ -346,6 +362,158 @@ var move = function( nbr ) {
 	highlightFrame.draw();
 	frame.cycle();
 }
+
+
+
+function displayLineChart( data ) {
+	console.clear();
+	frame.open();
+	frame.cycle();
+
+	var bgFrame = new Frame(1, 1, 80, 24, BG_BLACK, frame);
+	bgFrame.load( js.exec_dir + 'graphics/line-chart-background.bin');
+	bgFrame.draw();
+
+	var lineFrame = new Frame(1, 1, 80, 24, undefined, frame);
+	var demFrame = new Frame(1, 1, 80, 24, undefined, frame);
+	var repFrame = new Frame(1, 1, 80, 24, undefined, frame);
+	var labelFrame = new Frame(1, 1, 80, 24, undefined, frame);
+
+	lineFrame.load( js.exec_dir + 'graphics/magenta.bin');
+	demFrame.load( js.exec_dir + 'graphics/magenta.bin');
+	repFrame.load( js.exec_dir + 'graphics/magenta.bin');
+	labelFrame.load( js.exec_dir + 'graphics/magenta.bin');
+
+	lineFrame.transparent = true;
+	demFrame.transparent = true;
+	repFrame.transparent = true;
+	labelFrame.transparent = true;
+
+	emptyFrame( lineFrame );
+	emptyFrame( demFrame );
+	emptyFrame( repFrame );
+	emptyFrame( labelFrame );
+
+	var candidates = ['Clinton','Trump'];
+
+	for (var c=0; c < candidates.length; c++) {
+		var theFrame, theAttr, theLabelColor;
+		if (c==0) {
+			theFrame = demFrame;
+			theAttr = highBlue;
+		}
+		else {
+			theFrame = repFrame;
+			theAttr = highRed;
+		}
+
+		var winprobs = data['history'][ candidates[c] ];
+		winprobs.sort( sortByFirstElem );
+
+		var counter = 0;
+
+		for (var w=0; w<winprobs.length; w+=2) {
+			// Make sure graph doesn't go beyond terminal dimensions
+			if (counter < 79) {
+				// We're skipping by twos to fit into terminal,
+				// but we need to ensure the last data point is actually today's data
+				if ( w == winprobs.length-2 ) {
+					w+=1;
+				}
+
+				var pct = winprobs[w][1] / 100;
+				var y = 23 - (pct * 23);
+				var x = counter+1;
+				var decimal = y - parseInt(y);
+				y = parseInt(y);
+				var theCh;
+				if ( decimal < 0.5 ) {
+					theCh = blockLower;
+				}
+				else {
+					theCh = blockUpper;
+				}
+				theFrame.data[y][x].ch = theCh;
+				theFrame.data[y][x].attr = theAttr;
+				debug( 'winprobs len: ' + winprobs.length + ' | w: ' + w + ' | counter: ' + counter );
+
+				if ( w == winprobs.length-1 ) {
+					var lx, ly;
+					if ( pct > 0.5 ) { 
+						ly = y-1; 
+					}
+					else { ly = y+2; }
+					if ( x > 72 ) {
+						lx = x-7;
+					}
+					else {
+						lx = x+3;
+					}
+					debug( 'x: ' + x + ' | lx: ' + lx + ' | y: ' + y + ' | ly: ' + ly );
+					labelFrame.gotoxy(lx,ly);
+					labelFrame.putmsg( theAttr + candidates[c] );
+					labelFrame.gotoxy(lx,ly+1);
+					labelFrame.putmsg( theAttr + (pct*100).toFixed(1) + '%' );
+// 					for (var ly=1; ly<24; ly++) {
+// 						lineFrame.gotoxy(lx-1,ly);
+// 						lineFrame.putmsg( highBlack + charVertSingle );
+// 					}
+
+				}
+			}
+			counter+=1;
+		}
+
+	}
+
+	lineFrame.open();
+	lineFrame.top();
+	demFrame.open();
+	demFrame.top();
+	repFrame.open();
+	repFrame.top();
+	labelFrame.open();
+	labelFrame.top();
+
+	frame.cycle();
+	frame.screenShot( js.exec_dir + '/graph.bin' );
+
+	var userInput = '';
+
+	while( ascii(userInput) != 27 && ascii(userInput) != 81 && ascii(userInput) != 13 ) {
+		userInput = console.getkey( K_UPPER );
+// 		if ( userInput == KEY_LEFT || userInput == KEY_RIGHT ||  userInput == KEY_UP || userInput == KEY_DOWN ) {
+// 			switch( userInput ) {
+// 				case KEY_LEFT:
+// 					nextState = getStateInfo( currentState )['nbrL'].slice(0);
+// 					break;
+// 				case KEY_RIGHT:
+// 					nextState = getStateInfo( currentState )['nbrR'].slice(0);
+// 					break;
+// 				case KEY_UP:
+// 					nextState = getStateInfo( currentState )['nbrU'].slice(0);
+// 					break;
+// 				case KEY_DOWN:
+// 					nextState = getStateInfo( currentState )['nbrD'].slice(0);
+// 					break;
+// 			}
+// 			move( nextState );
+// 			currentState = nextState.slice(0);
+// 			nextState = '';
+// 			displayInfo( data, currentState );
+// 		}
+	}
+
+
+	bgFrame.delete();
+	lineFrame.delete();
+	demFrame.delete();
+	repFrame.delete();
+	labelFrame.delete();
+}
+
+
+
 
 
 var cleanUp = function() {
@@ -376,6 +544,8 @@ infoFrame.load(
 
 
 displayMap( data );
+
+displayLineChart( data );
 
 // When done, remove all the frames
 cleanUp();

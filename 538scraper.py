@@ -38,6 +38,7 @@ response = requests.get(url)
 soup = BeautifulSoup( response.text, 'lxml' )
 
 
+# PARSE STATE INFORMATION
 
 states = soup.findAll( 'div', { 'class': 'cardset' })
 for state in states:
@@ -75,6 +76,27 @@ for state in states:
 			statsObject['ELEXFORECAST']['us'] = thisStateObj
 		else:
 			statsObject['ELEXFORECAST']['states'].append( thisStateObj )
+
+
+# PARSE POLL WIN PROBABILITY HISTORY
+
+stateDataRegEx = re.compile('race.stateData = ({.+?});', re.M)
+
+script_tag = soup.find( 'script', text=stateDataRegEx ).text
+script_text = stateDataRegEx.search( script_tag ).group(1)
+script_data = json.loads( script_text )
+
+statsObject['ELEXFORECAST']['history'] = {}
+statsObject['ELEXFORECAST']['history']['Trump'] = []
+statsObject['ELEXFORECAST']['history']['Clinton'] = []
+
+for d in script_data['forecasts']['all']:
+	if d['candidate'] in ['Trump','Clinton']:
+		statsObject['ELEXFORECAST']['history'][ d['candidate'] ].append(
+			[ d['date'], d['models']['polls']['winprob'] ]
+		)
+
+
 
 print statsObject
 
