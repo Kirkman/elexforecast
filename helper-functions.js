@@ -7,6 +7,7 @@ function debug(debugText) {
 
 
 
+// Make transparent the parts of a frame that match a given char and attr
 function maskFrame(theFrame,maskChar,maskAttr) {
 	var x, y, xl, yl;
 	xl = theFrame.data.length;
@@ -20,6 +21,19 @@ function maskFrame(theFrame,maskChar,maskAttr) {
 				theFrame.data[x][y].ch = undefined;
 				theFrame.data[x][y].attr = undefined;
 			}
+		}
+	}
+}
+
+// Make frame completely transparent
+function emptyFrame(theFrame) {
+	var x, y, xl, yl;
+	xl = theFrame.data.length;
+	for (x=0; x<xl; x++) {
+		yl = theFrame.data[x].length;
+		for (y=0; y<yl; y++) {
+			theFrame.data[x][y].ch = undefined;
+			theFrame.data[x][y].attr = undefined;
 		}
 	}
 }
