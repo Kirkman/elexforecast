@@ -1,11 +1,11 @@
-Elex Forecast
-=============
+Elex Forecast 2020
+==================
 
 ![screenshot](https://raw.githubusercontent.com/Kirkman/elexforecast/master/elexforecast-animation.gif)
 
 ### What is this?
 
-Elex Forecast is an ANSI adaptation of FiveThirtyEight's 2016 Election Forecast map for BBSes. [Read more](http://breakintochat.com/blog/2016/10/04/who-needs-svg-when-youve-got-ansi/)
+Elex Forecast is an adaptation of FiveThirtyEight's 2020 Election Forecast for bulletin board systems in beautiful ANSI. [Read more](http://breakintochat.com/blog/2016/10/04/who-needs-svg-when-youve-got-ansi/)
 
 ### WHY?
 
@@ -30,4 +30,4 @@ See the `readme.txt` file.
 
 ### Acknowledgments
 
-The data used in this BBS door was scraped from FiveThirtyEight. I hope they won't mind if a handful of retrocomputing enthusiasts see it in ANSI.
+[The data](https://github.com/fivethirtyeight/data/tree/master/election-forecasts-2020) used in this BBS door comes from the talented team at FiveThirtyEight. 
