@@ -309,12 +309,20 @@ function displayMap( data ) {
 	displayInfo( data, 'us' );
 
 
-	var creditFrame = new Frame( 38, 23, 20, 2, BG_BLACK, frame);
+	var creditFrame = new Frame( 12, 23, 18, 2, BG_BLACK, frame);
 	creditFrame.gotoxy(1,1);
 	creditFrame.putmsg( highBlack + 'Data source:' );
 	creditFrame.gotoxy(1,2);
-	creditFrame.putmsg( highBlack + 'FiveThirtyEight.com' );
+	creditFrame.putmsg( highBlack + 'FiveThirtyEight' );
 	creditFrame.draw();
+
+	var instructFrame = new Frame( 38, 23, 18, 2, BG_BLACK, frame);
+	instructFrame.gotoxy(1,1);
+	instructFrame.putmsg( highBlack + 'Arrows: browse map' );
+	instructFrame.gotoxy(1,2);
+	instructFrame.putmsg( highBlack + 'Enter: next screen' );
+	instructFrame.draw();
+
 
 
 	// Keep running as long as the user hasn't hit [esc] or [q]
@@ -349,6 +357,7 @@ function displayMap( data ) {
 	}
 	creditFrame.delete();
 	infoFrame.delete();
+	instructFrame.delete();
 }
 
 
@@ -394,7 +403,10 @@ function displayLineChart( data ) {
 	emptyFrame( repFrame );
 	emptyFrame( labelFrame );
 
-	var candidates = ['Clinton','Trump'];
+	var candidates = [];
+	for (var key in data['history']) {
+		candidates.push(key);
+	}
 
 	for (var c=0; c < candidates.length; c++) {
 		var theFrame, theAttr, theLabelColor;
