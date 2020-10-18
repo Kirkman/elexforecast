@@ -4,14 +4,44 @@ load('frame.js');
 load('js-date-format.js');
 
 // some of the custom functions I'm using
-load(js.exec_dir + "helper-functions.js");
+load(js.exec_dir + 'helper-functions.js');
 
 
+// Screen size
+var termRows = console.screen_rows;
+var termCols = console.screen_columns;
 
-var f = new File(js.exec_dir + "server.ini");
-f.open("r");
+
+var f = new File(js.exec_dir + 'server.ini');
+f.open('r');
 var serverIni = f.iniGetObject();
 f.close();
+
+
+// https://stackoverflow.com/a/31687097
+function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
+  return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
+}
+
+// Adapted Bresenham JS routine
+function line(x0, y0, x1, y1){
+	var points = [];
+	var dx = Math.abs(x1-x0);
+	var dy = Math.abs(y1-y0);
+	var sx = (x0 < x1) ? 1 : -1;
+	var sy = (y0 < y1) ? 1 : -1;
+	var err = dx-dy;
+
+	while(true){
+		points.push( [x0,y0] );
+		if ((x0==x1) && (y0==y1)) break;
+		var e2 = 2*err;
+		if (e2 >-dy){ err -= dy; x0  += sx; }
+		if (e2 < dx){ err += dx; y0  += sy; }
+	}
+	return points;
+}
+
 
 
 // CHARACTER SET NOTE:
@@ -21,8 +51,15 @@ f.close();
 // COLORS
 var lowWhite = 'NW0';
 var highWhite = 'HW0';
+
+var lowGreen = 'NG0';
+var highGreen = 'HG0';
+var lowBrown = 'NY0';
+var highBrown = 'HY0';
+
 var lowCyan = 'NC0';
 var highCyan = 'HC0';
+var lowBlack = 'NK0';
 var highBlack = 'HK0';
 var highYellowDarkBlue = 'HY4';
 var highWhiteDarkCyan = 'HW6';
@@ -36,6 +73,8 @@ var highBlue = 'HB0';
 var lowRed = 'NR0';
 var lowBlue = 'NB0';
 
+var lowRedLowBlue = 'NR4';
+
 var lowRedHighWhite = 'NW1';
 var lowBlueHighWhite = 'NW4';
 
@@ -45,6 +84,7 @@ var lowBlueLowWhite = 'HW4';
 
 // CHARACTERS
 var charHorizSingle = ascii(196);
+var charHorizSingleDownSingle = ascii(197);
 var charHorizSingleDownDouble = ascii(210);
 var charVertDouble = ascii(186);
 var charVertSingle = ascii(179);
@@ -57,10 +97,14 @@ var solid = ascii(219);
 
 var blockUpper = ascii(223);
 var blockLower = ascii(220);
+var blockMid = ascii(254);
+
+var upTriangle = ascii(30);
+var downTriangle = ascii(31);
 
 
 // Frame for the whole app
-var frame = new Frame(1, 1, 80, 24, 0);
+var frame = new Frame(1, 1, termCols, termRows, 0);
 frame.putmsg( lowWhite + 'hi' );
 
 
@@ -374,33 +418,29 @@ var move = function( nbr ) {
 
 
 
+
+// CHANGES TO MAKE: 
+// Change green/brown color scheme to red/blue
+// Need to add party info
+// Need to re-scale x-axis
+
+
 function displayLineChart( data ) {
 	console.clear();
 	frame.open();
 	frame.cycle();
 
-	var bgFrame = new Frame(1, 1, 80, 24, BG_BLACK, frame);
-	bgFrame.load( js.exec_dir + 'graphics/line-chart-background.bin');
-	bgFrame.draw();
-
-	var lineFrame = new Frame(1, 1, 80, 24, undefined, frame);
-	var demFrame = new Frame(1, 1, 80, 24, undefined, frame);
-	var repFrame = new Frame(1, 1, 80, 24, undefined, frame);
-	var labelFrame = new Frame(1, 1, 80, 24, undefined, frame);
-
-	lineFrame.load( js.exec_dir + 'graphics/magenta.bin');
-	demFrame.load( js.exec_dir + 'graphics/magenta.bin');
-	repFrame.load( js.exec_dir + 'graphics/magenta.bin');
-	labelFrame.load( js.exec_dir + 'graphics/magenta.bin');
+	// Supporting frames
+	var lineFrame = new Frame(1, 1, termCols, termRows, undefined, frame);
+	var chartFrame = new Frame(1, 1, termCols, termRows, undefined, frame);
+	var labelFrame = new Frame(1, 1, termCols, termRows, undefined, frame);
 
 	lineFrame.transparent = true;
-	demFrame.transparent = true;
-	repFrame.transparent = true;
+	chartFrame.transparent = true;
 	labelFrame.transparent = true;
 
 	emptyFrame( lineFrame );
-	emptyFrame( demFrame );
-	emptyFrame( repFrame );
+	emptyFrame( chartFrame );
 	emptyFrame( labelFrame );
 
 	var candidates = [];
@@ -408,121 +448,260 @@ function displayLineChart( data ) {
 		candidates.push(key);
 	}
 
-	for (var c=0; c < candidates.length; c++) {
-		var theFrame, theAttr, theLabelColor;
-		if (c==0) {
-			theFrame = demFrame;
-			theAttr = highBlue;
+	// Trim the data to most recent 80 days
+	var overset = data['history'][candidates[0]].length - termCols;
+	if (overset > 0) {
+		data['history'][candidates[0]] = data['history'][candidates[0]].slice(-80);
+		data['history'][candidates[1]] = data['history'][candidates[1]].slice(-80);
+	}
+
+	// Get dates for labels
+	var startDate = new Date( data['history'][candidates[0]][0][0] );
+	var endDate = new Date( data['history'][candidates[0]][termCols-1][0] );
+
+	// Extract the data into separate arrays
+	var cand_1_data = data['history'][candidates[0]].map(function(a) { return a[1] });
+	var cand_2_data = data['history'][candidates[1]].map(function(a) { return a[1] });
+
+	// Combine two arrays into one so we can get min, max
+	var all_data = cand_1_data.concat( cand_2_data );
+
+	// Get min, max
+	// var dataMax = all_data.reduce(function(a, b) { return Math.max(a, b); });
+	// var dataMin = all_data.reduce(function(a, b) { return Math.min(a, b); });
+
+	// Let's use 0 and 100 to keep chart clear
+	var dataMax = 100;
+	var dataMin = 0;
+
+	// Iterate over each series, convert each value into a Y-coordinate
+	var cand_1_scaled = cand_1_data.map( function(a) { return parseInt( scaleBetween( a, (termRows-2)*2, 1, dataMin, dataMax ) ) });
+	var cand_2_scaled = cand_2_data.map( function(a) { return parseInt( scaleBetween( a, (termRows-2)*2, 1, dataMin, dataMax ) ) });
+
+	// Construct a Chart object
+	var chart = [
+		{ 'name': candidates[0], 'series': cand_1_scaled },
+		{ 'name': candidates[1], 'series': cand_2_scaled }
+	];
+
+	// Build the chart background
+	for (var y=0; y<termRows-1; y++) {
+		var text;
+		if (y == 0) {
+			text = highBlack + charHorizSingleDownSingle + charHorizSingle + ' ' + (parseInt(dataMax).toString() + '%').ljust(3,' ') + charHorizSingle.repeat( termCols-7 ) + charHorizSingleDownSingle;
+		}
+		else if (y == parseInt(termRows-2)/2) {
+			text = highBlack + charHorizSingleDownSingle + charHorizSingle + ' ' + (parseInt(50).toString() + '%').ljust(3,' ') + charHorizSingle.repeat( termCols-7 ) + charHorizSingleDownSingle;
+		}
+		else if (y == termRows-2) {
+			text = highBlack + charHorizSingleDownSingle + charHorizSingle + ' ' + (parseInt(dataMin).toString() + '%').ljust(3,' ') + charHorizSingle.repeat( termCols-7 ) + charHorizSingleDownSingle;
 		}
 		else {
-			theFrame = repFrame;
-			theAttr = highRed;
+			text = highBlack + charVertSingle + ' '.repeat( termCols-2 ) + charVertSingle;
 		}
+		lineFrame.gotoxy(1,y+1);
+		lineFrame.putmsg( text );
+	}
 
-		var winprobs = data['history'][ candidates[c] ];
-		winprobs.sort( sortByFirstElem );
 
-		var counter = 0;
 
-		for (var w=0; w<winprobs.length; w+=2) {
-			// Make sure graph doesn't go beyond terminal dimensions
-			if (counter < 79) {
-				// We're skipping by twos to fit into terminal,
-				// but we need to ensure the last data point is actually today's data
-				if ( w == winprobs.length-2 ) {
-					w+=1;
-				}
 
-				var pct = winprobs[w][1] / 100;
-				var y = 23 - (pct * 23);
-				var x = counter+1;
-				var decimal = y - parseInt(y);
-				y = parseInt(y);
-				var theCh;
-				if ( decimal < 0.5 ) {
-					theCh = blockLower;
-				}
-				else {
-					theCh = blockUpper;
-				}
-				theFrame.data[y][x].ch = theCh;
-				theFrame.data[y][x].attr = theAttr;
-				debug( 'winprobs len: ' + winprobs.length + ' | w: ' + w + ' | counter: ' + counter );
+	// Label begin date
+	lineFrame.gotoxy(1,termRows);
+	text = highBlack + upTriangle + ' ' + startDate.format('MMM D').ljust(12, ' ');
+	lineFrame.putmsg( text );
 
-				if ( w == winprobs.length-1 ) {
-					var lx, ly;
-					if ( pct > 0.5 ) { 
-						ly = y-1; 
-					}
-					else { ly = y+2; }
-					if ( x > 72 ) {
-						lx = x-7;
-					}
-					else {
-						lx = x+3;
-					}
-					debug( 'x: ' + x + ' | lx: ' + lx + ' | y: ' + y + ' | ly: ' + ly );
-					labelFrame.gotoxy(lx,ly);
-					labelFrame.putmsg( theAttr + candidates[c] );
-					labelFrame.gotoxy(lx,ly+1);
-					labelFrame.putmsg( theAttr + (pct*100).toFixed(1) + '%' );
-// 					for (var ly=1; ly<24; ly++) {
-// 						lineFrame.gotoxy(lx-1,ly);
-// 						lineFrame.putmsg( highBlack + charVertSingle );
-// 					}
+	// Label end date
+	lineFrame.gotoxy(termCols-14,termRows);
+	text = highBlack + endDate.format('MMM D').rjust(12, ' ') + ' /';
+	lineFrame.putmsg( text );
 
-				}
+	// Legend
+	lineFrame.gotoxy(13,termRows);
+	text = lowWhite + 'How the forecast has changed'.ljust(34,' ') + highBlue + blockMid + lowWhite + ' ' + candidates[0].ljust(11,' ') + highRed + blockMid + lowWhite + ' ' + candidates[1];
+	lineFrame.putmsg( text );
+
+	lineFrame.draw();
+
+	// Create array to hold pixels
+	var pixel_array = [];
+	for (var i = 0; i < termRows*2; i++) {
+		var row = [];
+		for (var j = 0; j < termCols; j++) {
+			row[j] = 0;
+		}
+		pixel_array[i] = row;
+	}
+
+	// Iterate over data points and draw lines from point to point
+	for (var p=0; p < chart.length; p++ ) {
+		var values = chart[p].series;
+		for (var v=0; v<values.length; v++ ) {
+
+			var this_y = values[v];
+			var this_x = v;
+			var points = [];
+
+			// if this is not the last coordinate, then compute a line from present coordinate to next coordinate
+			if ( v<values.length-1 ) {
+				var next_y = values[v+1];
+				var next_x = v+1;
+				points = line( this_x, this_y, next_x, next_y );
 			}
-			counter+=1;
+			// if this is the last coordinate, just use this single coordinate. no lines.
+			else {
+				points = [ [this_x, this_y] ];
+			}
+
+			// Now that we've computed all points to be plotted, actually plot them within our pixel array.
+			for (var pt=0; pt<points.length; pt++) {
+				// debug ('p: ' + p + ' | v: ' + v + ' | pt: ' + pt);
+				// debug ('pt: ' + pt);
+				// debug ( points[pt] );
+				try {
+					pixel_array[ points[pt][1] ][ points[pt][0] ] = p+1;
+				}
+				catch(e) {
+					debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=');
+					debug(e);
+					debug( points[pt][1] );
+					debug( pixel_array );
+				}
+
+			}
+
+		}
+	}
+
+	// for (var i = 0; i < pixel_array.length; i++) {
+	// 	debug(pixel_array[i]);
+	// }
+
+	var attrs = [undefined, highBlue, highRed];
+	// debug( 'pixel_array.length (Y): ' + pixel_array.length );
+	// debug( 'pixel_array[0].length (x): ' + pixel_array[0].length );
+
+	// Render pixel array to ANSI screen
+	for (var i = 0; i < pixel_array.length; i+=2) {
+		var y = (i+2)/2 - 1;
+		for (var x = 0; x< pixel_array[i].length; x++) {
+			var top = pixel_array[i][x];
+			var bot = pixel_array[i+1][x];
+			var theCh = undefined, theAttr = undefined;
+
+			// Determine how to color this block
+
+			// Solid block, same color
+			if ( top == bot && top > 0 ) {
+				theCh = solid;
+				theAttr = attrs[top];
+			}
+			// Empty cell, set to transparent
+			else if ( top == bot ) {
+				theCh = undefined;
+				theAttr = undefined;
+			}
+			// Half block, only top has color
+			else if ( bot == 0 ) {
+				theCh = blockUpper;
+				theAttr = attrs[top];
+			}
+			// Half block, only bottom has color
+			else if ( top == 0 ) {
+				theCh = blockLower;
+				theAttr = attrs[bot];
+			}
+
+			// I'M IGNORING THIS PART. I want to use high colors, and obviously can't use high Red and high Blue together.
+			// But the lines on this chart will never intersect in 2020, so it doesn't matter.
+
+			// // Half blocks, two colors. Green top, brown bottom
+			// else if ( top == 1 && bot == 2 ) {
+			// 	theCh = blockUpper;
+			// 	theAttr = 'NG3';
+			// }
+			// // Half blocks, two colors. Brown top, green bottom
+			// else if ( top == 2 && bot == 1 ) {
+			// 	theCh = blockLower;
+			// 	theAttr = 'NG3';
+			// }
+
+			// Not implemented yet. Probably shouldn't get here.
+			else {
+			}
+
+			if (theCh || theAttr) {
+				try {
+					chartFrame.setData(x,y, theCh, theAttr);
+				}
+				catch(e) {
+					debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=');
+					debug(e);
+					debug('top: ' + top +  ' | bot: ' + bot);
+					debug('theCh: ' + theCh +  ' | theAttr: ' + theAttr);
+					debug('i: ' + i +  ' | x: ' + x + ' | y: ' + y);
+					debugFrame(chartFrame);
+				}
+
+			}
 		}
 
 	}
 
+
+	// Attach labels
+	for (var c=0; c<2; c++) {
+		var ly = chart[c]['series'][termCols-1] / 2;
+
+		if ( parseInt(ly) != ly ) { 
+			ly = parseInt(ly) - 1;
+		}
+		else {
+			ly = ly + 2;	
+		}
+		labelFrame.gotoxy( 72, ly);
+		labelFrame.putmsg( attrs[c+1] + candidates[c] );
+		labelFrame.gotoxy( 72, ly+1);
+		if (c==0) {
+			labelFrame.putmsg( attrs[c+1] + (cand_1_data[termCols-1]) + '%' );
+		}
+		else {
+			labelFrame.putmsg( attrs[c+1] + (cand_2_data[termCols-1]) + '%' );
+		}
+	}
+
+
+
 	lineFrame.open();
 	lineFrame.top();
-	demFrame.open();
-	demFrame.top();
-	repFrame.open();
-	repFrame.top();
+	chartFrame.open();
+	chartFrame.top();
 	labelFrame.open();
 	labelFrame.top();
 
 	frame.cycle();
-	frame.screenShot( js.exec_dir + '/graph.bin' );
+	// frame.screenShot( js.exec_dir + '/graph.bin' );
 
 	var userInput = '';
 
 	while( ascii(userInput) != 27 && ascii(userInput) != 81 && ascii(userInput) != 13 ) {
 		userInput = console.getkey( K_UPPER );
-// 		if ( userInput == KEY_LEFT || userInput == KEY_RIGHT ||  userInput == KEY_UP || userInput == KEY_DOWN ) {
-// 			switch( userInput ) {
-// 				case KEY_LEFT:
-// 					nextState = getStateInfo( currentState )['nbrL'].slice(0);
-// 					break;
-// 				case KEY_RIGHT:
-// 					nextState = getStateInfo( currentState )['nbrR'].slice(0);
-// 					break;
-// 				case KEY_UP:
-// 					nextState = getStateInfo( currentState )['nbrU'].slice(0);
-// 					break;
-// 				case KEY_DOWN:
-// 					nextState = getStateInfo( currentState )['nbrD'].slice(0);
-// 					break;
-// 			}
-// 			move( nextState );
-// 			currentState = nextState.slice(0);
-// 			nextState = '';
-// 			displayInfo( data, currentState );
-// 		}
 	}
-
-
-	bgFrame.delete();
-	lineFrame.delete();
-	demFrame.delete();
-	repFrame.delete();
-	labelFrame.delete();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
