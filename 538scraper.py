@@ -182,6 +182,11 @@ statsObject['ELEXFORECAST']['us'] = thisStateObj
 
 # PARSE POLL WIN PROBABILITY HISTORY
 
+# Re-sort it from oldest to newest
+national_table = (national_table
+	.order_by( 'modeldate', reverse=False )
+)
+
 cands = [ national_table.rows[0]['candidate_inc'], national_table.rows[0]['candidate_chal'] ]
 
 statsObject['ELEXFORECAST']['history'] = {}
