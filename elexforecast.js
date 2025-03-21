@@ -20,7 +20,7 @@ f.close();
 
 // https://stackoverflow.com/a/31687097
 function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
-  return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
+	return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
 }
 
 // Adapted Bresenham JS routine
@@ -36,8 +36,8 @@ function line(x0, y0, x1, y1){
 		points.push( [x0,y0] );
 		if ((x0==x1) && (y0==y1)) break;
 		var e2 = 2*err;
-		if (e2 >-dy){ err -= dy; x0  += sx; }
-		if (e2 < dx){ err += dx; y0  += sy; }
+		if (e2 >-dy){ err -= dy; x0 += sx; }
+		if (e2 < dx){ err += dx; y0 += sy; }
 	}
 	return points;
 }
@@ -374,7 +374,7 @@ function displayMap( data ) {
 	var userInput = '';
 	while( ascii(userInput) != 27 && ascii(userInput) != 81 && ascii(userInput) != 13 ) {
 		userInput = console.getkey( K_UPPER );
-		if ( userInput == KEY_LEFT || userInput == KEY_RIGHT ||  userInput == KEY_UP || userInput == KEY_DOWN ) {
+		if ( userInput == KEY_LEFT || userInput == KEY_RIGHT || userInput == KEY_UP || userInput == KEY_DOWN ) {
 			switch( userInput ) {
 				case KEY_LEFT:
 					nextState = getStateInfo( currentState )['nbrL'].slice(0);
@@ -573,12 +573,15 @@ function displayLineChart( data ) {
 		}
 	}
 
-	// for (var i = 0; i < pixel_array.length; i++) {
-	// 	debug(pixel_array[i]);
-	// }
+	// NOTE ON COLORS. An old bug allowed setData() to parse CTRL-A codes. 
+	// I didn't know it at the time, but that was unintentional behavior
+	// and it was disabled in 2024. So it's important to provide only
+	// CTRL-A codes to putmsg(), and only Attribute constants to setData().
 
-	var attrs = [undefined, highBlue, highRed];
-	// debug( 'pixel_array.length (Y): ' + pixel_array.length );
+	// CTRL-A codes for putmsg()
+	var codes = ['', highBlue, highRed];
+	// Attribute constants for setData()
+	var attrs = [undefined, BLUE|HIGH, RED|HIGH];
 	// debug( 'pixel_array[0].length (x): ' + pixel_array[0].length );
 
 	// Render pixel array to ANSI screen
@@ -637,9 +640,9 @@ function displayLineChart( data ) {
 				catch(e) {
 					debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=');
 					debug(e);
-					debug('top: ' + top +  ' | bot: ' + bot);
-					debug('theCh: ' + theCh +  ' | theAttr: ' + theAttr);
-					debug('i: ' + i +  ' | x: ' + x + ' | y: ' + y);
+					debug('top: ' + top + ' | bot: ' + bot);
+					debug('theCh: ' + theCh + ' | theAttr: ' + theAttr);
+					debug('i: ' + i + ' | x: ' + x + ' | y: ' + y);
 					debugFrame(chartFrame);
 				}
 
@@ -660,13 +663,13 @@ function displayLineChart( data ) {
 			ly = ly + 2;	
 		}
 		labelFrame.gotoxy( 72, ly);
-		labelFrame.putmsg( attrs[c+1] + candidates[c] );
+		labelFrame.putmsg( codes[c+1] + candidates[c] );
 		labelFrame.gotoxy( 72, ly+1);
 		if (c==0) {
-			labelFrame.putmsg( attrs[c+1] + (cand_1_data[termCols-1]) + '%' );
+			labelFrame.putmsg( codes[c+1] + (cand_1_data[termCols-1]) + '%' );
 		}
 		else {
-			labelFrame.putmsg( attrs[c+1] + (cand_2_data[termCols-1]) + '%' );
+			labelFrame.putmsg( codes[c+1] + (cand_2_data[termCols-1]) + '%' );
 		}
 	}
 
